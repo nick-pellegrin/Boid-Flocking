@@ -45,6 +45,7 @@ Contents of python file:
 
 import pygame
 import sys
+from random import *
 
 
 
@@ -52,6 +53,7 @@ import sys
 WIN_WIDTH = 1100
 WIN_HEIGHT = 700
 BACKGROUND_COLOR = (30, 30, 30)
+TOTAL_PIXELS = 0
 
 #initializes the module packages and the screen
 pygame.init()
@@ -99,7 +101,7 @@ class Particle:
         pygame.draw.circle(screen, (255, 255, 255), (x, y), self.PARTICLE_SIZE, 0)
     
    
-    def move(self, pos_at, pos_to):
+    def move(self, pos_at, pos_to, index, TOGGLE_X_SIDE, TOGGLE_Y_SIDE):
         """
         moves particle |
         pos_at = current location (x_at, y_at) |
@@ -108,19 +110,45 @@ class Particle:
         """
         x_at, y_at = pos_at
         x_to, y_to = pos_to
+        x_multiplier = 0
+        y_multiplier = 0
+        x_box_destination = 0
+        y_box_destination = 0
 
-        while 1:
+        firstQuarter = TOTAL_PIXELS*0.25
+        secondQuarter = TOTAL_PIXELS*0.5
+        thirdQuarter = TOTAL_PIXELS*0.75
+
+        if index <= firstQuarter:
+            x_box_destination = x_to + (TOGGLE_X_SIDE * index)
+            y_box_destination = y_to + firstQuarter
+        elif index <= secondQuarter:
+            x_box_destination = x_to + firstQuarter
+            y_box_destination = y_to + (TOGGLE_Y_SIDE * (index - firstQuarter))
+        elif index <= thirdQuarter:
+            x_box_destination = x_to + (TOGGLE_X_SIDE * (index - secondQuarter))
+            y_box_destination = y_to - firstQuarter
+        else:
+            x_box_destination = x_to - firstQuarter
+            y_box_destination = y_to + (TOGGLE_Y_SIDE * (index - thirdQuarter))
+
+        TOGGLE_X_SIDE = TOGGLE_X_SIDE * -1
+        TOGGLE_Y_SIDE = TOGGLE_Y_SIDE * -1
+
+
+        
+
+
+        if x_box_destination != x_at and y_box_destination != y_at: #stops loop when particle reaches destination 
             
-            if x_to == x_at or y_to == y_at: break   #stops loop when particle reaches destination      
-            
-            slope = (y_to - y_at) / (x_to - x_at) #sets slope (needs to be inverted for vertical movements)
+            slope = (y_box_destination - y_at) / (x_box_destination - x_at) #sets slope (needs to be inverted for vertical movements)
                 
             # for more horizontal movement 
             if abs(slope) <= 1:           
-                if x_to > x_at:            
+                if x_box_destination > x_at:            
                     x_inc = 1              
                     y_inc = slope          
-                if x_to < x_at:            
+                if x_box_destination < x_at:            
                     x_inc = -1             
                     y_inc = -slope   
             
@@ -129,19 +157,19 @@ class Particle:
                 
                 # if slope is positive
                 if slope > 0:                  
-                    if x_to > x_at:            
+                    if x_box_destination > x_at:            
                         x_inc = 1/slope        
                         y_inc = 1              
-                    if x_to < x_at:            
+                    if x_box_destination < x_at:            
                         x_inc = -1/slope       
                         y_inc = -1     
 
                 # if slope is negative
                 if slope < 0:              
-                    if x_to > x_at:            
+                    if x_box_destination > x_at:            
                         x_inc = -1/slope        
                         y_inc = -1              
-                    if x_to < x_at:            
+                    if x_box_destination < x_at:            
                         x_inc = 1/slope       
                         y_inc = 1               
                     
@@ -151,10 +179,11 @@ class Particle:
             x_at = x_at + x_inc
             y_at = y_at + y_inc
 
-            screen.fill(BACKGROUND_COLOR)
+            
             self.draw(self.x, self.y)
-            pygame.display.update()
-            pygame.time.delay(5)
+            #pygame.display.update()
+            #pygame.time.delay(1)
+        else: self.draw(x_at, y_at)
             
             
         
@@ -174,22 +203,36 @@ using pygame to create the simulation, and python object to represent the partic
 """
 
 #declares and initializes our first particle
-p_1 = Particle(550, 350)
+particleList = []
+randomNum = randint(100, 699)
+for num in range(0, randomNum):
+    particleList.append(Particle(randint(1, 1100), randint(1, 700)))
 
+TOTAL_PIXELS = len(particleList)
+TOGGLE_X_SIDE = -1
+TOGGLE_Y_SIDE = 1
 
 #main simulation loop
+eventCount = 0
 while 1: 
     for event in pygame.event.get():
-        
+        eventCount += 1
         if event.type == pygame.QUIT:
             sys.exit()
 
         
-        if event.type == pygame.MOUSEBUTTONDOWN:
-            p_1.move( p_1.get_pos(), pygame.mouse.get_pos() )
-    
-    
+        if event.type == pygame.MOUSEBUTTONDOWN: #Will only work with at most 2 clicks in a row - otherwise it will skip ahead and go to wherever you clicked right before the particle reaches its 1st destination
+            for num in range(0, 2000):
+                for num in range(0, randomNum):
+                    particleList[num].move( particleList[num].get_pos(), pygame.mouse.get_pos(), num, TOGGLE_X_SIDE, TOGGLE_Y_SIDE )
+                    TOGGLE_X_SIDE =TOGGLE_X_SIDE * -1
+                    TOGGLE_Y_SIDE = TOGGLE_Y_SIDE * -1
+                
+                pygame.display.update()
+                screen.fill(BACKGROUND_COLOR)
+                #pygame.time.delay(100)
+            break
+
+            
+            
     pygame.display.update()
-
-
-
