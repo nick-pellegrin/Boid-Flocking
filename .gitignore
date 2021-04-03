@@ -1,0 +1,8 @@
+
+
+# dependencies 
+virtualenv
+
+# misc
+__pycache__
+.vscode
