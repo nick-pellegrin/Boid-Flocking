@@ -18,6 +18,8 @@ Next, you will need to activate your virtual environment in order to add package
 to [name of your virtual directory]/Scripts and run the command: 
  
   $ activate
+  or 
+  $ source activate
   
 To deactivate, go to the Scripts directory again and type:
  
@@ -43,7 +45,7 @@ The python interpreter you want is located in the virtual environment you just c
 
 Example:  [name of your virtual env]/Scripts/python.exe
  
-  
+Or $ python simulation.py  
   
   
 
