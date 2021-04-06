@@ -75,7 +75,7 @@ Contains the instructions for the movement mechanics of a single particle.
 
 class Particle:
     
-    PARTICLE_SIZE = 5     #in pixels
+    PARTICLE_SIZE = 2     #in pixels
 
     def __init__(self, x, y, is_leader):
         """
@@ -86,14 +86,12 @@ class Particle:
         """
         #leader follows mouse, non-leader exhibits flocking behavior
         self.is_leader = is_leader  
-
         self.position = np.array([float(x), float(y)])
         self.velocity = (np.random.rand(2) - 0.5)*10      # -5.0 < velocity < 5.0       -> [x, y]
         self.acceleration = (np.random.rand(2) - 0.5)/2   # -0.25 < acceleration < 0.25 -> [x, y]
-
         self.max_force = 0.3
         self.max_speed = 5
-        self.perception = 200  #in pixels, radius of max perception
+        self.perception = 300  #in pixels, radius of max perception
 
     
     def draw(self):
@@ -104,11 +102,6 @@ class Particle:
         if self.is_leader: self.color = (255, 0, 0)
         else: self.color = (255, 255, 255)
         pygame.draw.circle(screen, self.color, (self.position[0], self.position[1]), self.PARTICLE_SIZE, 0)
-    
-
-    def update(self):
-        self.position += self.velocity
-        self.velocity += self.acceleration
 
 
     def move(self, pos_to, cloud):
@@ -122,36 +115,43 @@ class Particle:
             x_at = self.position[0]
             y_at = self.position[1]
             x_to, y_to = pos_to
-
             dist_vector = [x_to - x_at, y_to - y_at]  # vector starting at 'pos_at' going to to 'pos_to'
             norm = np.linalg.norm(dist_vector)        # finds the norm (magnitude) of dist_vector
             self.velocity =  (dist_vector/norm)       # a unit vecotr pointing to destination
-
             self.position += self.velocity
-            
             self.draw()
-        
         else:
             self.apply_behavior(cloud)
             self.update()
             self.draw()
+            self.acceleration = np.array([0.0, 0.0])  #resets acceleration vector
 
-            self.acceleration = [0.0, 0.0]  #resets acceleration vector
+
+    def update(self):
+        self.position += self.velocity
+        self.velocity += self.acceleration
 
 
     def apply_behavior(self, cloud):
+        """
+        governs particle flock behavior |
+        cloud = list of particles |
+        returns: none |
+        """
         alignment = self.align(cloud)
         cohesion = self.cohesion(cloud)
-
         self.acceleration += alignment
         self.acceleration += cohesion
 
 
-    #steers particles towards avg direction of particles around it
     def align(self, cloud):
+        """
+        steers the particle in the average direction of all the particles in its perceptinon radius |
+        cloud = list of particles |
+        returns: steering vector [x, y] |
+        """
         steering = np.array([0.0, 0.0])
         total = 0
-
         for particle in cloud:
             if np.linalg.norm(particle.position - self.position) < self.perception:
                 steering += particle.velocity
@@ -162,15 +162,17 @@ class Particle:
             steering = steering - self.velocity
         if np.linalg.norm(steering) > self.max_force:
             steering = (steering/np.linalg.norm(steering)) * self.max_force
-
         return steering
     
 
-    #steering particles towards the center of mass of the particles around it 
     def cohesion(self, cloud):
+        """
+        steers particles towards the center of mass of all particles within its perception radius  |
+        cloud = list of particles |
+        returns: steering vector [x, y] |
+        """
         steering = np.array([0.0, 0.0])
         total = 0
-
         for particle in cloud:
             if np.linalg.norm(particle.position - self.position) < self.perception:
                 steering += particle.position
@@ -182,7 +184,6 @@ class Particle:
             steering = steering - self.velocity
         if np.linalg.norm(steering) > self.max_force:
             steering = (steering/np.linalg.norm(steering)) * self.max_force
-
         return steering
     
     
@@ -217,20 +218,14 @@ for i in range(50):
 #main simulation loop
 while 1: 
 
-
     for event in pygame.event.get():
-
         if event.type == pygame.QUIT:
             sys.exit()
-
         # if event.type == pygame.MOUSEBUTTONDOWN:
         #     p_1.move( pygame.mouse.get_pos() )
-        
-
-    for i in particle_list:
-        i.move( pygame.mouse.get_pos(), particle_list )
-        
     
+    for i in particle_list:
+        i.move( pygame.mouse.get_pos(), particle_list ) 
     
     pygame.display.update()
     screen.fill(BACKGROUND_COLOR)
