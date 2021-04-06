@@ -103,6 +103,17 @@ class Particle:
         else: self.color = (255, 255, 255)
         pygame.draw.circle(screen, self.color, (self.position[0], self.position[1]), self.PARTICLE_SIZE, 0)
 
+    
+    def edges(self):
+        if self.position[0] > WIN_WIDTH:
+            self.position[0] = 0
+        elif self.position[0] < 0:
+            self.position[0] = WIN_WIDTH
+        if self.position[1] > WIN_HEIGHT:
+            self.position[1] = 0
+        elif self.position[1] < 0:
+            self.position[1] = WIN_HEIGHT
+
 
     def move(self, pos_to, cloud):
         """
@@ -121,6 +132,7 @@ class Particle:
             self.position += self.velocity
             self.draw()
         else:
+            self.edges()
             self.apply_behavior(cloud)
             self.update()
             self.draw()
@@ -180,7 +192,8 @@ class Particle:
         if total > 0:
             steering /= total
             steering = steering - self.position
-            steering = (steering / np.linalg.norm(steering)) * self.max_speed
+            if np.linalg.norm(steering) > 0:
+                steering = (steering / np.linalg.norm(steering)) * self.max_speed
             steering = steering - self.velocity
         if np.linalg.norm(steering) > self.max_force:
             steering = (steering/np.linalg.norm(steering)) * self.max_force
