@@ -75,7 +75,7 @@ Contains the instructions for the movement mechanics of a single particle.
 
 class Particle:
     
-    PARTICLE_SIZE = 2     #in pixels
+    PARTICLE_SIZE = 2    #in pixels
 
     def __init__(self, x, y, is_leader):
         """
@@ -89,9 +89,15 @@ class Particle:
         self.position = np.array([float(x), float(y)])
         self.velocity = (np.random.rand(2) - 0.5)*10      # -5.0 < velocity < 5.0       -> [x, y]
         self.acceleration = (np.random.rand(2) - 0.5)/2   # -0.25 < acceleration < 0.25 -> [x, y]
-        self.max_force = 0.3
-        self.max_speed = 5
-        self.perception = 300  #in pixels, radius of max perception
+        self.max_force = 0.3   #default: 0.3
+        self.max_speed = 5     #default: 5
+        #self.perception = 100  #in pixels, radius of max perception
+        self.alignment_perception = 100
+        self.cohesion_perception = 150
+        self.separation_perception = 100
+        self.alignment_strength = 1
+        self.cohesion_strength = 1
+        self.separation_strength = 1
 
     
     def draw(self):
@@ -128,7 +134,7 @@ class Particle:
             x_to, y_to = pos_to
             dist_vector = [x_to - x_at, y_to - y_at]  # vector starting at 'pos_at' going to to 'pos_to'
             norm = np.linalg.norm(dist_vector)        # finds the norm (magnitude) of dist_vector
-            self.velocity =  (dist_vector/norm)       # a unit vecotr pointing to destination
+            self.velocity = dist_vector/norm          # a unit vecotr pointing to destination
             self.position += self.velocity
             self.draw()
         else:
@@ -150,10 +156,12 @@ class Particle:
         cloud = list of particles |
         returns: none |
         """
-        alignment = self.align(cloud)
-        cohesion = self.cohesion(cloud)
+        alignment = self.align(cloud) * self.alignment_strength
+        cohesion = self.cohesion(cloud) * self.cohesion_strength
+        separation = self.separation(cloud) * self.separation_strength
         self.acceleration += alignment
         self.acceleration += cohesion
+        self.acceleration += separation
 
 
     def align(self, cloud):
@@ -165,7 +173,7 @@ class Particle:
         steering = np.array([0.0, 0.0])
         total = 0
         for particle in cloud:
-            if np.linalg.norm(particle.position - self.position) < self.perception:
+            if np.linalg.norm(particle.position - self.position) < self.alignment_perception:
                 steering += particle.velocity
                 total += 1
         if total > 0:
@@ -186,12 +194,36 @@ class Particle:
         steering = np.array([0.0, 0.0])
         total = 0
         for particle in cloud:
-            if np.linalg.norm(particle.position - self.position) < self.perception:
+            if np.linalg.norm(particle.position - self.position) < self.cohesion_perception:
                 steering += particle.position
                 total += 1
         if total > 0:
             steering /= total
             steering = steering - self.position
+            if np.linalg.norm(steering) > 0:
+                steering = (steering / np.linalg.norm(steering)) * self.max_speed
+            steering = steering - self.velocity
+        if np.linalg.norm(steering) > self.max_force:
+            steering = (steering/np.linalg.norm(steering)) * self.max_force
+        return steering
+
+    
+    def separation(self, cloud):
+        """
+        steers particles away from other particles, inversely proportional to dist between particles  |
+        cloud = list of particles |
+        returns: steering vector [x, y] |
+        """
+        steering = np.array([0.0, 0.0])
+        total = 0
+        for particle in cloud:
+            if particle != self and np.linalg.norm(particle.position - self.position) < self.separation_perception:
+                difference = self.position - particle.position
+                difference /= np.linalg.norm(particle.position - self.position)
+                steering += difference
+                total += 1
+        if total > 0:
+            steering /= total
             if np.linalg.norm(steering) > 0:
                 steering = (steering / np.linalg.norm(steering)) * self.max_speed
             steering = steering - self.velocity
@@ -223,7 +255,7 @@ using pygame to create the simulation, and python object to represent the partic
 
 #declares and initializes our particles
 particle_list = []
-for i in range(50):
+for i in range(30):
     particle_list.append(Particle(randint(150, 950), randint(150, 550), False))
 
 
@@ -234,8 +266,19 @@ while 1:
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
             sys.exit()
-        # if event.type == pygame.MOUSEBUTTONDOWN:
-        #     p_1.move( pygame.mouse.get_pos() )
+        
+        if event.type == pygame.MOUSEBUTTONDOWN:
+            for i in particle_list:
+                if i.cohesion_perception == 150:
+                    i.cohesion_perception = 1000
+                    i.alignment_strength = 0
+                    i.separation_strength = 0
+                elif i.cohesion_perception == 1000:
+                    i.cohesion_perception = 150
+                    i.alignment_strength = 1
+                    i.separation_strength = 1
+
+
     
     for i in particle_list:
         i.move( pygame.mouse.get_pos(), particle_list ) 
