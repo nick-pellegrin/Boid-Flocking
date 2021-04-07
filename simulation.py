@@ -204,7 +204,7 @@ using pygame to create the simulation, and python object to represent the partic
 
 #declares and initializes our first particle
 particleList = []
-randomNum = randint(100, 699)
+randomNum = randint(10, 100)
 for num in range(0, randomNum):
     particleList.append(Particle(randint(1, 1100), randint(1, 700)))
 
@@ -213,25 +213,22 @@ TOGGLE_X_SIDE = -1
 TOGGLE_Y_SIDE = 1
 
 #main simulation loop
-eventCount = 0
 while 1: 
     for event in pygame.event.get():
-        eventCount += 1
         if event.type == pygame.QUIT:
             sys.exit()
 
         
-        if event.type == pygame.MOUSEBUTTONDOWN: #Will only work with at most 2 clicks in a row - otherwise it will skip ahead and go to wherever you clicked right before the particle reaches its 1st destination
-            for num in range(0, 2000):
-                for num in range(0, randomNum):
-                    particleList[num].move( particleList[num].get_pos(), pygame.mouse.get_pos(), num, TOGGLE_X_SIDE, TOGGLE_Y_SIDE )
-                    TOGGLE_X_SIDE =TOGGLE_X_SIDE * -1
-                    TOGGLE_Y_SIDE = TOGGLE_Y_SIDE * -1
-                
-                pygame.display.update()
-                screen.fill(BACKGROUND_COLOR)
-                #pygame.time.delay(100)
-            break
+        #if event.type == pygame.MOUSEBUTTONDOWN: #Will only work with at most 2 clicks in a row - otherwise it will skip ahead and go to wherever you clicked right before the particle reaches its 1st destination
+    #for num in range(0, 2000):
+    for num in range(0, randomNum):
+        particleList[num].move( particleList[num].get_pos(), pygame.mouse.get_pos(), num, TOGGLE_X_SIDE, TOGGLE_Y_SIDE )
+        TOGGLE_X_SIDE = TOGGLE_X_SIDE * -1
+        TOGGLE_Y_SIDE = TOGGLE_Y_SIDE * -1
+        
+    pygame.display.update()
+    screen.fill(BACKGROUND_COLOR)
+    pygame.time.delay(15)
 
             
             
