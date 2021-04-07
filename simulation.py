@@ -45,7 +45,9 @@ Contents of python file:
 
 import pygame
 import sys
+import math
 from random import *
+import numpy as np
 
 
 
@@ -70,121 +72,138 @@ Contains the instructions for the movement mechanics of a single particle.
 
 ------------------------------------------------------------------------------------------
 """
+      
 
 class Particle:
     
-    PARTICLE_SIZE = 5  #in pixels
+    PARTICLE_SIZE = 2     #in pixels
 
-    def __init__(self, x, y):
+    def __init__(self, x, y, is_leader):
         """
         initializes particle object |
-        x = starting x coord |
-        y = starting y coord |
+        x = (int) starting x coord |
+        y = (int) starting y coord |
+        is_leader = (boolean) is particle a leader |
         """
-        self.x = x
-        self.y = y
-        self.IMG = pygame.draw.circle(screen, (255, 255, 255), (self.x, self.y), self.PARTICLE_SIZE, 0)
+        #leader follows mouse, non-leader exhibits flocking behavior
+        self.is_leader = is_leader  
+        self.position = np.array([float(x), float(y)])
+        self.velocity = (np.random.rand(2) - 0.5)*10      # -5.0 < velocity < 5.0       -> [x, y]
+        self.acceleration = (np.random.rand(2) - 0.5)/2   # -0.25 < acceleration < 0.25 -> [x, y]
+        self.max_force = 0.3
+        self.max_speed = 5
+        self.perception = 300  #in pixels, radius of max perception
 
     
-    def get_pos(self):
-        """
-        returns: current position in form of (x, y)
-        """
-        return (self.x, self.y)
-
-    
-    def draw(self, x, y):
+    def draw(self):
         """
         draws particle on screen at (x, y) |
         returns: none |
         """
-        pygame.draw.circle(screen, (255, 255, 255), (x, y), self.PARTICLE_SIZE, 0)
+        if self.is_leader: self.color = (255, 0, 0)
+        else: self.color = (255, 255, 255)
+        pygame.draw.circle(screen, self.color, (self.position[0], self.position[1]), self.PARTICLE_SIZE, 0)
+
     
-   
-    def move(self, pos_at, pos_to, index, TOGGLE_X_SIDE, TOGGLE_Y_SIDE):
+    def edges(self):
+        if self.position[0] > WIN_WIDTH:
+            self.position[0] = 0
+        elif self.position[0] < 0:
+            self.position[0] = WIN_WIDTH
+        if self.position[1] > WIN_HEIGHT:
+            self.position[1] = 0
+        elif self.position[1] < 0:
+            self.position[1] = WIN_HEIGHT
+
+
+    def move(self, pos_to, cloud):
         """
         moves particle |
         pos_at = current location (x_at, y_at) |
         pos_to = desired location (x_to, y_to) |
         returns: none |
         """
-        x_at, y_at = pos_at
-        x_to, y_to = pos_to
-        x_multiplier = 0
-        y_multiplier = 0
-        x_box_destination = 0
-        y_box_destination = 0
-
-        firstQuarter = TOTAL_PIXELS*0.25
-        secondQuarter = TOTAL_PIXELS*0.5
-        thirdQuarter = TOTAL_PIXELS*0.75
-
-        if index <= firstQuarter:
-            x_box_destination = x_to + (TOGGLE_X_SIDE * index)
-            y_box_destination = y_to + firstQuarter
-        elif index <= secondQuarter:
-            x_box_destination = x_to + firstQuarter
-            y_box_destination = y_to + (TOGGLE_Y_SIDE * (index - firstQuarter))
-        elif index <= thirdQuarter:
-            x_box_destination = x_to + (TOGGLE_X_SIDE * (index - secondQuarter))
-            y_box_destination = y_to - firstQuarter
+        if self.is_leader:
+            x_at = self.position[0]
+            y_at = self.position[1]
+            x_to, y_to = pos_to
+            dist_vector = [x_to - x_at, y_to - y_at]  # vector starting at 'pos_at' going to to 'pos_to'
+            norm = np.linalg.norm(dist_vector)        # finds the norm (magnitude) of dist_vector
+            self.velocity =  (dist_vector/norm)       # a unit vecotr pointing to destination
+            self.position += self.velocity
+            self.draw()
         else:
-            x_box_destination = x_to - firstQuarter
-            y_box_destination = y_to + (TOGGLE_Y_SIDE * (index - thirdQuarter))
+            self.edges()
+            self.apply_behavior(cloud)
+            self.update()
+            self.draw()
+            self.acceleration = np.array([0.0, 0.0])  #resets acceleration vector
 
-        TOGGLE_X_SIDE = TOGGLE_X_SIDE * -1
-        TOGGLE_Y_SIDE = TOGGLE_Y_SIDE * -1
+
+    def update(self):
+        self.position += self.velocity
+        self.velocity += self.acceleration
 
 
+    def apply_behavior(self, cloud):
+        """
+        governs particle flock behavior |
+        cloud = list of particles |
+        returns: none |
+        """
+        alignment = self.align(cloud)
+        cohesion = self.cohesion(cloud)
+        self.acceleration += alignment
+        self.acceleration += cohesion
+
+
+    def align(self, cloud):
+        """
+        steers the particle in the average direction of all the particles in its perceptinon radius |
+        cloud = list of particles |
+        returns: steering vector [x, y] |
+        """
+        steering = np.array([0.0, 0.0])
+        total = 0
+        for particle in cloud:
+            if np.linalg.norm(particle.position - self.position) < self.perception:
+                steering += particle.velocity
+                total += 1
+        if total > 0:
+            steering /= total
+            steering = (steering / np.linalg.norm(steering)) * self.max_speed
+            steering = steering - self.velocity
+        if np.linalg.norm(steering) > self.max_force:
+            steering = (steering/np.linalg.norm(steering)) * self.max_force
+        return steering
+    
+
+    def cohesion(self, cloud):
+        """
+        steers particles towards the center of mass of all particles within its perception radius  |
+        cloud = list of particles |
+        returns: steering vector [x, y] |
+        """
+        steering = np.array([0.0, 0.0])
+        total = 0
+        for particle in cloud:
+            if np.linalg.norm(particle.position - self.position) < self.perception:
+                steering += particle.position
+                total += 1
+        if total > 0:
+            steering /= total
+            steering = steering - self.position
+            if np.linalg.norm(steering) > 0:
+                steering = (steering / np.linalg.norm(steering)) * self.max_speed
+            steering = steering - self.velocity
+        if np.linalg.norm(steering) > self.max_force:
+            steering = (steering/np.linalg.norm(steering)) * self.max_force
+        return steering
+    
+    
         
-
-
-        if x_box_destination != x_at and y_box_destination != y_at: #stops loop when particle reaches destination 
-            
-            slope = (y_box_destination - y_at) / (x_box_destination - x_at) #sets slope (needs to be inverted for vertical movements)
-                
-            # for more horizontal movement 
-            if abs(slope) <= 1:           
-                if x_box_destination > x_at:            
-                    x_inc = 1              
-                    y_inc = slope          
-                if x_box_destination < x_at:            
-                    x_inc = -1             
-                    y_inc = -slope   
-            
-            # for more vertical movement
-            elif abs(slope) > 1:          
-                
-                # if slope is positive
-                if slope > 0:                  
-                    if x_box_destination > x_at:            
-                        x_inc = 1/slope        
-                        y_inc = 1              
-                    if x_box_destination < x_at:            
-                        x_inc = -1/slope       
-                        y_inc = -1     
-
-                # if slope is negative
-                if slope < 0:              
-                    if x_box_destination > x_at:            
-                        x_inc = -1/slope        
-                        y_inc = -1              
-                    if x_box_destination < x_at:            
-                        x_inc = 1/slope       
-                        y_inc = 1               
-                    
-
-            self.x = x_at + x_inc
-            self.y = y_at + y_inc
-            x_at = x_at + x_inc
-            y_at = y_at + y_inc
-
-            
-            self.draw(self.x, self.y)
-            #pygame.display.update()
-            #pygame.time.delay(1)
-        else: self.draw(x_at, y_at)
-            
+        
+        
             
         
 
@@ -202,33 +221,33 @@ using pygame to create the simulation, and python object to represent the partic
 ------------------------------------------------------------------------------------------
 """
 
-#declares and initializes our first particle
-particleList = []
-randomNum = randint(10, 100)
-for num in range(0, randomNum):
-    particleList.append(Particle(randint(1, 1100), randint(1, 700)))
 
-TOTAL_PIXELS = len(particleList)
+#declares and initializes our particles
+particle_list = []
+for i in range(50):
+    particle_list.append(Particle(randint(150, 950), randint(150, 550), False))
+
+
+TOTAL_PIXELS = len(particle_list)
 TOGGLE_X_SIDE = -1
 TOGGLE_Y_SIDE = 1
 
 #main simulation loop
 while 1: 
+
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
             sys.exit()
-
-        
-        #if event.type == pygame.MOUSEBUTTONDOWN: #Will only work with at most 2 clicks in a row - otherwise it will skip ahead and go to wherever you clicked right before the particle reaches its 1st destination
-    #for num in range(0, 2000):
-    for num in range(0, randomNum):
-        particleList[num].move( particleList[num].get_pos(), pygame.mouse.get_pos(), num, TOGGLE_X_SIDE, TOGGLE_Y_SIDE )
-        TOGGLE_X_SIDE = TOGGLE_X_SIDE * -1
-        TOGGLE_Y_SIDE = TOGGLE_Y_SIDE * -1
-        
+        # if event.type == pygame.MOUSEBUTTONDOWN:
+        #     p_1.move( pygame.mouse.get_pos() )
+    
+    for i in particle_list:
+        i.move( pygame.mouse.get_pos(), particle_list ) 
+    
     pygame.display.update()
     screen.fill(BACKGROUND_COLOR)
-    pygame.time.delay(15)
+    pygame.time.delay(5)
+    
 
             
             
