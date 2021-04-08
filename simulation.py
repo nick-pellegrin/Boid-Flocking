@@ -92,11 +92,11 @@ class Particle:
         self.max_force = 0.3   #default: 0.3
         self.max_speed = 5     #default: 5
         #self.perception = 100  #in pixels, radius of max perception
-        self.alignment_perception = 100
+        self.alignment_perception = 70
         self.cohesion_perception = 150
         self.separation_perception = 100
         self.alignment_strength = 1
-        self.cohesion_strength = 1
+        self.cohesion_strength = 0.7
         self.separation_strength = 1
 
     
