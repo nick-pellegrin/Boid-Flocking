@@ -1,4 +1,4 @@
-# Particle-Motion-Sim
+# Boid-Flocking
 This project uses Pygame to visualize a flocking simulation using the BOID flocking algorithm and a simple physics engine.  
 ThThe BOID flocking algorithm primarily consists of three parts:
 * **Separation:** given a single agent, we don't want that agent to get too close to other agents.  This function provides a sum of acceleration vectors that point away from its nearest neighboring agents and are inversely proportional to the distance from the neighboring agent.  Essentially, the closer a neighbor is the stronger the acceleration away from that neighbor is.
