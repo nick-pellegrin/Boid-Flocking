@@ -8,4 +8,7 @@ ThThe BOID flocking algorithm primarily consists of three parts:
 The above simplee behaviors, when combined, allow for flocking patterns to emerge.  The Three acceleration vectors above are added together with each vector being multiplied by its corresponding weight so we can alter the strength of each of the behaviors, allowing for more fine tuned control of the behavior we want to observe.  Each behavior above also has a perception radius that allows us to alter how large or small we want to make the agents' field of view.
 
 # Boid Flocking Demo
-![](https://github.com/nick-pellegrin/Boid-Flocking/blob/master/boid_demo.gif)
+![](https://github.com/nick-pellegrin/Boid-Flocking/blob/master/boid_demo.gif)  
+
+# Future Progress
+The next step for this project is to implement a NEAT algorithm to evolve neural networks to control the agents autonomously, this would allow the agents to potentially exhibit more complex and more interesting behaviour and group dynamics.
