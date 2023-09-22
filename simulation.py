@@ -109,6 +109,19 @@ class Particle:
         else: self.color = (255, 255, 255)
         pygame.draw.circle(screen, self.color, (self.position[0], self.position[1]), self.PARTICLE_SIZE, 0)
 
+
+    def avoid_edges(self, width, height, margin):
+        acceleration = np.zeros(2)
+        x, y = self.position
+        if x < margin:
+            acceleration[0] = (margin - x) / margin
+        elif x > width - margin:
+            acceleration[0] = (width - margin - x) / margin
+        if y < margin:
+            acceleration[1] = (margin - y) / margin
+        elif y > height - margin:
+            acceleration[1] = (height - margin - y) / margin
+        self.acceleration = acceleration * self.max_force
     
     def edges(self):
         if self.position[0] > WIN_WIDTH:
@@ -138,7 +151,8 @@ class Particle:
             self.position += self.velocity
             self.draw()
         else:
-            self.edges()
+            # self.edges()
+            self.avoid_edges(WIN_WIDTH, WIN_HEIGHT, 50)
             self.apply_behavior(cloud)
             self.update()
             self.draw()
@@ -255,7 +269,7 @@ using pygame to create the simulation, and python object to represent the partic
 
 #declares and initializes our particles
 particle_list = []
-for i in range(30):
+for i in range(50):
     particle_list.append(Particle(randint(150, 950), randint(150, 550), False))
 
 
